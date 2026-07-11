@@ -60,8 +60,18 @@ release**.
 ```
 
 Bounds (enforced by the integration and by CI): ≤64 device types, file
-≤256 KiB. **Reserved slugs** — `wican`, `wican_usb`, `wican_pro`,
-`meatpi` — are defined in integration code and cannot appear here.
+≤256 KiB.
+
+**Reserved slugs** — `wican`, `wican_usb`, `wican_pro`, `meatpi` — are
+defined in integration code and are **extend-only** here: their catalog
+entries may carry `model` (informational) and `sensors` (adopted —
+this is how a new WiCAN diagnostic sensor ships without an integration
+release), but `hw_keywords`, capability flags, and `firmware` are
+code-defined and rejected by CI. Older integration versions ignore
+reserved entries entirely, so adding sensors here is always
+backward-safe; firmware that does not send a new sensor's key simply
+shows that sensor as unknown.
+
 Catalog entries override same-named non-reserved built-ins (e.g.
 `espnetlink`), which act as the integration's offline fallback.
 

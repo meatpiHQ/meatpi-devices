@@ -32,8 +32,11 @@ SLUG_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 FIRMWARE_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 STATUS_KEY_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
-# Defined in integration code; the catalog can never redefine them.
+# Defined in integration code. These slugs are EXTEND-ONLY in the
+# catalog: they may add sensors, but identity (model is informational
+# only), hw_keywords, capability flags, and firmware stay code-defined.
 RESERVED_SLUGS = {"wican", "wican_usb", "wican_pro", "meatpi"}
+RESERVED_ALLOWED_FIELDS = {"model", "sensors"}
 
 errors: list[str] = []
 
@@ -86,11 +89,16 @@ def check_device_type(slug: str, raw: object) -> None:
     where = f"device_types.{slug}"
     if not SLUG_RE.match(slug):
         err(f"{where}: slug does not match {SLUG_RE.pattern}")
-    if slug in RESERVED_SLUGS:
-        err(f"{where}: slug is reserved (defined in integration code)")
     if not isinstance(raw, dict):
         err(f"{where}: must be an object")
         return
+    if slug in RESERVED_SLUGS:
+        for field in set(raw) - RESERVED_ALLOWED_FIELDS:
+            err(
+                f"{where}.{field}: not allowed on the reserved slug "
+                f"{slug!r} — identity, capabilities, and firmware are "
+                "code-defined; reserved entries may only add sensors"
+            )
     check_str(raw.get("model"), MAX_MODEL_LENGTH, f"{where}.model", required=True)
 
     keywords = raw.get("hw_keywords")

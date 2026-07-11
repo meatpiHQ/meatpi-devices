@@ -1,7 +1,19 @@
 {
   "schema": 1,
-  "_comment": "MeatPi device catalog — the living source of device-type definitions for the Home Assistant integration (https://github.com/meatpiHQ/ha-wican). Fetched by every install at most once per 24h; validated before merge by validate_catalog.py. Reserved slugs (wican, wican_usb, wican_pro, meatpi) are defined in integration code and cannot be redefined here.",
+  "_comment": "MeatPi device catalog — the living source of device-type definitions for the Home Assistant integration (https://github.com/meatpiHQ/ha-wican). Fetched by every install at most once per 24h; validated before merge by validate_catalog.py. Reserved slugs (wican, wican_usb, wican_pro, meatpi) are EXTEND-ONLY: their entries here may add sensors, but identity, capabilities, and firmware matching are defined in integration code.",
   "device_types": {
+    "wican": {
+      "model": "WiCAN OBD",
+      "sensors": []
+    },
+    "wican_usb": {
+      "model": "WiCAN USB",
+      "sensors": []
+    },
+    "wican_pro": {
+      "model": "WiCAN Pro",
+      "sensors": []
+    },
     "espnetlink": {
       "model": "ESPNetlink",
       "hw_keywords": [
