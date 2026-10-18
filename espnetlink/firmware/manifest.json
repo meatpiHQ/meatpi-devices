@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "device_type": "espnetlink",
+  "model": "ESPNetLink",
+  "project_name": "espnetlink-fw",
+  "source_repo": "meatpiHQ/espnetlink-fw",
+  "updated": "2026-10-18T21:28:06Z",
+  "channels": {
+    "stable": {
+      "latest": "1.20.0"
+    },
+    "beta": {
+      "latest": "1.20.0"
+    },
+    "alfa": {
+      "latest": "1.20.0"
+    }
+  },
+  "releases": [
+    {
+      "version": "1.20.0",
+      "fw_version": "v1.20",
+      "commit": "2fd5a9f1f2407942dbb0c8ef89e13d9440180870",
+      "tag": "v1.20",
+      "channel": "stable",
+      "date": "2026-03-15",
+      "summary": "Public release of the ESPNetLink firmware.",
+      "notes": "espnetlink/firmware/notes/1.20.0.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/espnetlink-fw/releases/download/v1.20/espnetlink-fw_v120.bin",
+        "size": 1097536,
+        "sha256": "efc1e94397a01311bc88b1f87864ce5817deb6de154561d50eb861a472dc514d",
+        "project_name": "espnetlink-fw_v120"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/espnetlink-fw/releases/download/v1.20/espnetlink-fw_v120.zip",
+        "size": 663812,
+        "sha256": "875f766bbba16d82130b24e38930cb07925054444effdf695c1987ba736b81e2"
+      },
+      "bootloader": {
+        "sha256": "5cd8a23ee783d9b93352233ff68e4500cb3e5c1f71f6f24a56d366219dd5f07f"
+      },
+      "layout": {
+        "md5": "fc90a384ddaa5a6c032cf16e27bdbb05",
+        "table": "espnetlink/firmware/layouts/fc90a384ddaa5a6c032cf16e27bdbb05.csv"
+      },
+      "yanked": false
+    }
+  ]
+}

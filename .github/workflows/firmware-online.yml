@@ -1,0 +1,37 @@
+name: Firmware online check
+
+# Reaches every hosted image and serial flash zip the manifests point at:
+# the final answer must be 200 with a Content-Length equal to the declared
+# size. Weekly, the pointed releases are downloaded and their sha256
+# checked too (about 15 MB). Never on pull requests.
+
+on:
+  workflow_dispatch:
+    inputs:
+      download:
+        description: "Download every image and check its sha256"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 6 * * 1"
+
+jobs:
+  online:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the hosted images
+        env:
+          EVENT: ${{ github.event_name }}
+          DOWNLOAD: ${{ inputs.download }}
+        run: |
+          if [ "$EVENT" = "schedule" ]; then
+            python3 tools/validate_firmware.py --online --download --pointed-only
+          elif [ "$DOWNLOAD" = "true" ]; then
+            python3 tools/validate_firmware.py --online --download
+          else
+            python3 tools/validate_firmware.py --online
+          fi

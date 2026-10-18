@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "device_type": "wican_pro",
+  "model": "WiCAN PRO",
+  "project_name": "wican-fw_obd_pro",
+  "source_repo": "meatpiHQ/wican-fw",
+  "updated": "2026-10-18T21:28:02Z",
+  "channels": {
+    "stable": {
+      "latest": "4.51.0"
+    },
+    "beta": {
+      "latest": "4.51.0"
+    },
+    "alfa": {
+      "latest": "6.0.0-alfa.6"
+    }
+  },
+  "releases": [
+    {
+      "version": "6.0.0-alfa.6",
+      "fw_version": "v6.00p_alfa-06",
+      "commit": "b1adc7ea17ea55e6c42072d084752f81be13b041",
+      "tag": "v6.00p_alfa-06",
+      "channel": "alfa",
+      "date": "2026-10-16",
+      "summary": "Sixth alfa of the v6 firmware: new UI, Quick Setup, DBC signals, scripting, UDS tools, J2534, VPN, USB devices.",
+      "notes": "wican_pro/firmware/notes/6.0.0-alfa.6.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/wican-fw/releases/download/v6.00p_alfa-06/wican-fw_obd_pro_v600p_alfa-06.bin",
+        "size": 3764768,
+        "sha256": "e72cd7c7da75f23de3ee3417d27cc6db5ba4e1b313e73b74590c057e9735efd5",
+        "project_name": "wican-fw_obd_pro_v600p_alfa-06"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
+    {
+      "version": "4.51.0",
+      "fw_version": "v4.51p",
+      "commit": "43f0d1de53c46825f596a2f1b84539b65a3c8b19",
+      "tag": "v4.51p",
+      "channel": "stable",
+      "date": "2026-09-04",
+      "summary": "IDF 6.0.2 and an AutoPID fix for vehicle profiles that returned incorrect PID values (#710).",
+      "notes": "wican_pro/firmware/notes/4.51.0.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/wican-fw/releases/download/v4.51p/wican-fw_obd_pro_v451p.bin",
+        "size": 3570592,
+        "sha256": "40f2bf68709ac82e299c8abb40019c5179963f5dda6a375c92658971b486da8a",
+        "project_name": "wican-fw_obd_pro_v451p"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/wican-fw/releases/download/v4.51p/wican-fw_obd_pro_v451p.zip",
+        "size": 1894939,
+        "sha256": "4fc16e1915c0ce501f47a8b8c671a107a1a61416dee2b54d500c5f70b3ab059e"
+      },
+      "bootloader": {
+        "sha256": "2501334df34d719c3a8504c587308cab602cfd527506b070090052f598bf4f3c"
+      },
+      "layout": {
+        "md5": "225242e6822a60aa93a9a67abd9442ed",
+        "table": "wican_pro/firmware/layouts/225242e6822a60aa93a9a67abd9442ed.csv"
+      },
+      "yanked": false
+    }
+  ]
+}

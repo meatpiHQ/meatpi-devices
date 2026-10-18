@@ -86,3 +86,13 @@ Catalog entries override same-named non-reserved built-ins (e.g.
   [`notes/device-contract/DEVICE_CATALOG.md`](https://github.com/meatpiHQ/ha-wican/blob/main/notes/device-contract/DEVICE_CATALOG.md)
   in the integration repo. Keep the integration's bundled
   `data/device_catalog.json` in sync when cutting integration releases.
+
+## Firmware
+
+Devices that update themselves read their release list from this
+repository: `<device_type>/firmware/manifest.json`, with the release notes
+under `notes/` and the partition layouts under `layouts/` beside it. The
+images are GitHub release assets, not committed files. The contract, the
+tools and the publishing flow are in [`FIRMWARE.md`](FIRMWARE.md);
+`tools/validate_firmware.py` runs in CI on every push and pull request,
+and the catalog above is never touched by the firmware tooling.

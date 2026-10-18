@@ -15,3 +15,5 @@ jobs:
           python-version: "3.12"
       - name: Validate device_catalog.json
         run: python3 validate_catalog.py device_catalog.json
+      - name: Validate the firmware manifests
+        run: python3 tools/validate_firmware.py --self-test
