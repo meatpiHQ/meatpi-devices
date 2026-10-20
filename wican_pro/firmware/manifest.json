@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-10-18T21:28:02Z",
+  "updated": "2026-10-20T12:51:43Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "4.51.0"
+      "latest": "6.0.0-beta.1"
     },
     "alfa": {
-      "latest": "6.0.0-alfa.6"
+      "latest": "6.0.0-beta.1"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.1",
+      "fw_version": "6.0.0-beta.1",
+      "fw_build": "v6.0.0p-beta.1",
+      "commit": "e35b1d8169cc3208afdcf2fd10d50d02d8b8aadb",
+      "tag": "v6.0.0p-beta.1",
+      "channel": "beta",
+      "date": "2026-10-20",
+      "summary": "First beta of v6: updates from the MeatPi release list, a connected ESPNetLink updated from the WiCAN, J2534-1 ISO15765 and J1850 VPW.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.1.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.1/wican-fw_obd_pro_v6.0.0-beta.1.bin",
+        "size": 3832944,
+        "sha256": "ab3273d9c6d6cbbf227efa21c876e1f78b8575f9d258cfa02d4ce08e50b149b2",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.1/wican-fw_obd_pro_v6.0.0-beta.1.zip",
+        "size": 2326955,
+        "sha256": "1e9461a328c0ae9e80fe02904a725b15edb434475e1e0c0751c49edac8fbf146"
+      },
+      "bootloader": {
+        "sha256": "c07fbff32d0bf85ddd598ba22a44fb39a7cdab1443918e3d290549e83e5fb430"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-alfa.6",
       "fw_version": "v6.00p_alfa-06",
