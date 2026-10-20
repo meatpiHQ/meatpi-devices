@@ -177,13 +177,40 @@ python3 tools/add_layout.py --slug espnetlink --table partition-table.bin
 
 Writes or updates a layout csv from a built table.
 
-`tools/fwpub/` is the library behind them, imported by each firmware
-repository's `tools/release.py` as well (the publisher: build, check,
-upload, manifest, commit, promote, yank): `versions` (grammar, order,
-selection), `layout` (tables, md5, csv, verdicts), `manifest` (load,
-insert, pointers, prune, validate), `notes`, `appdesc` (the application
-descriptor and image integrity), `github` (releases and assets over the
-REST API with urllib).
+`tools/fwpub/` is the library behind them and behind each firmware
+repository's `tools/release.py`, the publisher:
+
+```
+python tools/release.py check                       the local checks; prints the release it would add
+python tools/release.py publish --channel alfa      build, check, tag, upload, manifest, commit, push
+python tools/release.py publish --channel stable    the same, plus the stable mirror release on the firmware repo
+python tools/release.py promote 6.1.0-beta.2 --to stable
+python tools/release.py yank 6.1.0-alfa.1 --reason "..."
+python tools/release.py notes 6.1.0-alfa.1 [--file PATH]     amend the notes after the release
+flags: --dry-run --no-build --no-push --resume --tag --date --summary --token-file --devices
+```
+
+The firmware repository holds `version.txt`, `release-notes/<version>.md`
+(front matter with the summary, the layout block between the
+`release.py:layout` markers filled by the tool) and `tools/release.json`
+(slug, model, project name, asset names, the hardware letter in the tag,
+the stable mirror). `publish` refuses a dirty tree, a version the
+manifest carries, an image whose descriptor disagrees with `version.txt`,
+and a table whose stored digest disagrees with the computed one; it
+creates the `<device_type>-<version>` release here, uploads the image and
+the serial flash zip, reads back their sizes and digests, writes the
+layout csv and the notes, inserts the release, prunes to the archive,
+validates, commits `<slug>: publish <version> (<channel>)` and pushes.
+`--resume` finishes a publish whose release exists; `--dry-run` shows the
+whole plan and writes nothing. A fine-grained token with Contents read and
+write on this repository and the firmware repository comes from
+`MEATPI_RELEASE_TOKEN` or `--token-file`; CI never has one.
+
+Modules: `versions` (grammar, order, selection), `layout` (tables, md5,
+csv, verdicts), `manifest` (load, insert, pointers, prune, validate),
+`notes`, `appdesc` (the application descriptor and image integrity),
+`github` (releases and assets over the REST API with urllib), `flashset`
+(the serial flash zip), `gitops` (git through subprocess), `publish`.
 
 ## Rules of the tree
 

@@ -98,8 +98,13 @@ def pick_zip(release, name):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--slug", required=True)
-    ap.add_argument("--repo", required=True, help="owner/repo of the firmware source")
-    ap.add_argument("--tag", required=True)
+    ap.add_argument("--repo", required=True,
+                    help="owner/repo that HOLDS the release: the firmware repo, or meatpiHQ/meatpi-devices "
+                         "for an alfa or beta whose assets live here")
+    ap.add_argument("--tag", required=True, help="the tag of that release")
+    ap.add_argument("--source-tag",
+                    help="the git tag in the firmware repo (the manifest's `tag`) when the release lives on "
+                         "the devices repo, e.g. v6.1.0p-alfa.1 for wican_pro-6.1.0-alfa.1; default: --tag")
     ap.add_argument("--version", required=True, help="the strict version this release is")
     ap.add_argument("--channel", required=True, choices=versions.CHANNELS)
     ap.add_argument("--summary", required=True, help="one sentence, at most 140 characters")
@@ -257,7 +262,8 @@ def main():
     date = a.date or (release.get("published_at") or "")[:10]
     if not date:
         raise SystemExit("no publication date; pass --date")
-    commit = gh.commit_for_tag(a.repo, a.tag)
+    source_tag = a.source_tag or a.tag
+    commit = gh.commit_for_tag(doc["source_repo"], source_tag)
 
     image_url = image_asset["browser_download_url"]
     zip_url = zip_asset["browser_download_url"] if zip_asset else None
@@ -282,7 +288,7 @@ def main():
             zip_url = upz["browser_download_url"]
 
     rel_obj = manifest_mod.ordered_release({
-        "version": a.version, "fw_version": desc["version"], "commit": commit, "tag": a.tag,
+        "version": a.version, "fw_version": desc["version"], "commit": commit, "tag": source_tag,
         "channel": a.channel, "date": date, "summary": summary,
         "notes": "%s/firmware/notes/%s.md" % (a.slug, a.version),
         "image": {"url": image_url, "size": len(image), "sha256": image_sha, "project_name": desc["project_name"]},
