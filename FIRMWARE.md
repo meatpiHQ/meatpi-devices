@@ -28,8 +28,10 @@ The images are not committed: they are the assets of GitHub releases, on
 this repository for releases made by the publisher (tag
 `<device_type>-<version>`, name `<Model> <version>`, `prerelease` for alfa
 and beta, never marked latest) and on the firmware repository for the
-releases that existed before. Stable WiCAN PRO releases keep being posted
-on `meatpiHQ/wican-fw` as well; alfa and beta releases exist only here.
+releases that existed before. Every release is also posted on the firmware
+repository's own releases page under its source tag (alfa and beta as
+pre-releases, stable as a release), which is where people look; the
+manifest points at the copy here.
 
 ## What is in the manifest
 
