@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-10-20T12:51:43Z",
+  "updated": "2026-10-21T09:36:33Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.1"
+      "latest": "6.0.0-beta.2"
     },
     "alfa": {
-      "latest": "6.0.0-beta.1"
+      "latest": "6.0.0-beta.2"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.2",
+      "fw_version": "6.0.0-beta.2",
+      "fw_build": "v6.0.0p-beta.2",
+      "commit": "418a35b980c704f3e7dc1ba55b644eb160306437",
+      "tag": "v6.0.0p-beta.2",
+      "channel": "beta",
+      "date": "2026-10-21",
+      "summary": "Second beta of v6: fixes the Home Assistant crash loop of beta.1, the freeze at the start of an update and a WebSocket connect race.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.2.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.2/wican-fw_obd_pro_v6.0.0-beta.2.bin",
+        "size": 3833040,
+        "sha256": "4701e5f17e3c018b1c4acd8f04b59c13387a8f6f75c3053de0ce71510dd31359",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.2/wican-fw_obd_pro_v6.0.0-beta.2.zip",
+        "size": 2326967,
+        "sha256": "559686c16d221fcef298278eff5a7a0a00aa20c50c747f7a99c6ce4768e13b12"
+      },
+      "bootloader": {
+        "sha256": "c07fbff32d0bf85ddd598ba22a44fb39a7cdab1443918e3d290549e83e5fb430"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.1",
       "fw_version": "6.0.0-beta.1",
