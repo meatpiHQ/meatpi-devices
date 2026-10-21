@@ -4,19 +4,54 @@
   "model": "ESPNetLink",
   "project_name": "espnetlink-fw",
   "source_repo": "meatpiHQ/espnetlink-fw",
-  "updated": "2026-10-18T21:28:06Z",
+  "updated": "2026-10-21T13:13:14Z",
   "channels": {
     "stable": {
-      "latest": "1.20.0"
+      "latest": "1.23.0"
     },
     "beta": {
-      "latest": "1.20.0"
+      "latest": "1.23.0"
     },
     "alfa": {
-      "latest": "1.20.0"
+      "latest": "1.23.0"
     }
   },
   "releases": [
+    {
+      "version": "1.23.0",
+      "fw_version": "1.23.0",
+      "fw_build": "v1.23.0",
+      "commit": "8ceade10bc0529d7035615ab8d3cf8467cd8b5d4",
+      "tag": "v1.23.0",
+      "channel": "stable",
+      "date": "2026-10-21",
+      "summary": "First release that installs from a WiCAN PRO; a dongle on 1.20 or older is flashed once over USB with the serial flash set.",
+      "notes": "espnetlink/firmware/notes/1.23.0.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/espnetlink-1.23.0/espnetlink-fw_v1.23.0.bin",
+        "size": 1922480,
+        "sha256": "81f1d0438a6afcfa620f36f798e3f7e08dda43ec8c23975e5829cf7f40c6674a",
+        "project_name": "espnetlink-fw"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/espnetlink-1.23.0/espnetlink-fw_v1.23.0.zip",
+        "size": 1209772,
+        "sha256": "6a2e02f809d9434c0f26d7e3251c6e1a165498aa11dfc70ce7a2539dd44ff0ef"
+      },
+      "bootloader": {
+        "sha256": "270862e55969adc7588432c8c97933d326f2f65814f049c44255b33f6c931460"
+      },
+      "layout": {
+        "md5": "4ab851ed091a20b0eb35046eba065189",
+        "table": "espnetlink/firmware/layouts/4ab851ed091a20b0eb35046eba065189.csv"
+      },
+      "layout_from": {
+        "fc90a384ddaa5a6c032cf16e27bdbb05": {
+          "migration": "serial"
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "1.20.0",
       "fw_version": "v1.20",

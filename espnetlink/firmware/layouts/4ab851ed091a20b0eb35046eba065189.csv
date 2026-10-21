@@ -2,7 +2,7 @@
 # device_type: espnetlink
 # name: v1.23 (two 5 MB OTA slots, settings, storage, coredump)
 # first_seen: 1.23.0-alfa.1
-# last_seen: 1.23.0-alfa.1
+# last_seen: 1.23.0
 # source: espnetlink_partitions_table.csv (branch main)
 # name,type,subtype,offset,size,flags
 nvs,0x01,0x02,0x9000,0x20000,0x0
