@@ -1,8 +1,10 @@
 """The publisher behind each firmware repository's `tools/release.py`:
 
     release.py check                        the local checks; prints the release it would add
-    release.py publish --channel alfa       build, check, tag, upload, manifest, commit, push
-    release.py publish --channel stable     the same, plus the stable mirror release on the firmware repo
+    release.py publish --channel alfa       build, check, tag, upload, manifest, commit, push,
+                                            and the pre-release people browse on the firmware repo
+    release.py publish --channel stable     the same, the firmware repo's entry a release with the footer
+    release.py mirror 6.0.0-beta.1          (re)create the firmware repo's entry for a published version
     release.py promote 6.1.0-beta.2 --to stable
     release.py yank 6.1.0-alfa.1 --reason "boot loop with an SD card inserted" [--keep-assets]
     release.py notes 6.1.0-alfa.1 [--file PATH]   amend the notes after the release
@@ -54,7 +56,55 @@ def load_config(path):
     cfg.setdefault("partition_words", {})
     cfg.setdefault("keep_in_manifest", manifest_mod.KEEP_DEFAULT)
     cfg.setdefault("chip", "esp32s3")
+    cfg.setdefault("release_test", {})
     return cfg
+
+
+# ---- the release test's record (2026-10-21) --------------------------------------------
+
+def release_test_record(repo_root, image_sha, rt):
+    """The bench's record for this image (test-reports/release/<sha256>.json,
+    written by tools/testbench/release/release_test.py), or why it does not
+    count: (record or None, problem or ""). The policy lives in
+    release.json's "release_test": required, max_age_h, allow_skips."""
+    rdir = os.path.join(repo_root, rt.get("record_dir") or os.path.join("test-reports", "release"))
+    path = os.path.join(rdir, image_sha + ".json")
+    if not os.path.isfile(path):
+        return None, "no record for this image (%s)" % os.path.relpath(path, repo_root)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            rec = json.load(f)
+    except (OSError, ValueError) as exc:
+        return None, "the record does not read: %s" % exc
+    if rec.get("image_sha256") != image_sha:
+        return rec, "the record names another image"
+    if rec.get("verdict") != "PASS" or not rec.get("complete", False) or not rec.get("flashed", False):
+        return rec, "the record is %s%s" % (rec.get("verdict"), "" if rec.get("complete") else " (partial run)")
+    if rec.get("skips") and not rt.get("allow_skips", False):
+        return rec, "the run skipped %s (allow_skips is off)" % ", ".join(s.get("step", "?") for s in rec["skips"])
+    max_age_h = float(rt.get("max_age_h") or 24)
+    try:
+        when = datetime.datetime.strptime(rec.get("date", ""), "%Y-%m-%d %H:%M:%S UTC").replace(tzinfo=datetime.timezone.utc)
+    except ValueError:
+        return rec, "the record carries no readable date"
+    age_h = (datetime.datetime.now(datetime.timezone.utc) - when).total_seconds() / 3600.0
+    if age_h > max_age_h:
+        return rec, "the record is %.0f h old (max_age_h %g)" % (age_h, max_age_h)
+    return rec, ""
+
+
+def bench_line(p):
+    """One sentence for the release bodies: what the bench said about this image."""
+    rec = getattr(p, "release_test", None)
+    if getattr(p, "untested", False):
+        return "Not bench-tested: published with --no-release-test."
+    if not rec:
+        return ""
+    mins = int(round(float(rec.get("duration_s") or 0) / 60.0))
+    skipped = ", ".join(s.get("step", "?") for s in (rec.get("skips") or []))
+    return "Bench: RELEASE TEST %s, %d steps%s, %d min, %s." % (
+        rec.get("verdict"), len(rec.get("steps") or []),
+        " (skipped: %s)" % skipped if skipped else "", mins, rec.get("date"))
 
 
 def version_tagged(cfg, version):
@@ -236,6 +286,26 @@ def prepare(a, repo_root, cfg, devices_root, dry_run):
     p.image_sha = hashlib.sha256(image).hexdigest()
     p.fw_build = gitops.describe(repo_root)
 
+    # the release test's record for these bytes (2026-10-21): check warns,
+    # publish refuses, --no-release-test publishes with a mark in the bodies
+    p.release_test = None
+    p.untested = False
+    rt = cfg.get("release_test") or {}
+    if rt.get("required"):
+        rec, problem = release_test_record(repo_root, p.image_sha, rt)
+        p.release_test = rec if not problem else None
+        if problem:
+            if getattr(a, "no_release_test", False):
+                p.untested = True
+                p.warnings.append("release test: %s; --no-release-test: the release goes out marked "
+                                  "'Not bench-tested'" % problem)
+            elif dry_run:
+                p.warnings.append("release test: %s; publish will refuse (run .\\test.ps1 release on "
+                                  "this build first)" % problem)
+            else:
+                raise Fatal("release test: %s. Run .\\test.ps1 release on this build first, or pass "
+                            "--no-release-test to publish it untested (marked as such)" % problem)
+
     # the layout and its verdicts
     table_path = os.path.join(build_dir, "partition_table", "partition-table.bin")
     if not os.path.isfile(table_path):
@@ -322,9 +392,10 @@ def prepare(a, repo_root, cfg, devices_root, dry_run):
     p.actions.append("insert %s into %s/firmware/manifest.json, pointers %s%s" % (
         version, slug, json.dumps(p.channels_after), (", %d older release(s) to archive.json" % p.archived) if p.archived else ""))
     p.actions.append("commit and push the devices checkout: '%s: publish %s (%s)'" % (slug, version, a.channel))
-    if a.channel == "stable" and cfg.get("stable_mirror"):
-        p.actions.append("create the mirror release %s (%s) on %s with the same files" % (
-            p.n["mirror_tag"], p.n["mirror_name"], cfg["stable_mirror"]["repo"]))
+    if cfg.get("stable_mirror") and (a.channel == "stable" or cfg.get("mirror_prereleases", True)):
+        p.actions.append("create the %s %s (%s) on %s with the notes and the same files" % (
+            "release" if a.channel == "stable" else "pre-release", p.n["mirror_tag"], p.n["mirror_name"],
+            cfg["stable_mirror"]["repo"]))
     return p
 
 
@@ -347,6 +418,7 @@ def run_build(repo_root, cfg):
 def print_plan(p, cfg, a):
     say("release %s %s on channel %s (tag %s, build %s)" % (cfg["model"], p.version, a.channel, p.n["source_tag"], p.fw_build))
     say("  image %d B sha256 %s, layout %s%s" % (len(p.image), p.image_sha[:16], p.md5[:8], " (new)" if p.new_layout else ""))
+    say("  release test: %s" % (bench_line(p) or ("not required" if not (cfg.get("release_test") or {}).get("required") else "no fresh PASS record")))
     for md5, v in sorted(p.layout_from.items()):
         say("  from layout %s: %s%s" % (md5[:8], v["migration"], (" " + ", ".join(v.get("wipes") or [])) if v.get("wipes") else ""))
     say("  notes %d B, summary: %s" % (len(p.notes_text.encode("utf-8")), p.summary))
@@ -404,14 +476,22 @@ def ensure_asset(gh, repo, rel, name, data, sha, dry_run):
                     % (name, up.get("size"), d, len(data), sha))
 
 
-def devices_body(cfg, version, channel):
-    return ("%s firmware %s, channel %s.\nRelease notes: https://github.com/%s/blob/main/%s/firmware/notes/%s.md\n"
+def devices_body(cfg, version, channel, bench=""):
+    body = ("%s firmware %s, channel %s.\nRelease notes: https://github.com/%s/blob/main/%s/firmware/notes/%s.md\n"
             "Install from the device's web page, or let the device update itself."
             % (cfg["model"], version, channel, cfg["devices_repo"], cfg["slug"], version))
+    if bench:
+        body += "\n" + bench
+    return body
 
 
-def mirror_body(repo_root, cfg, notes_text, version, contributors):
+def mirror_body(repo_root, cfg, notes_text, version, contributors, channel="stable", bench=""):
     body = notes_text.rstrip("\n") + "\n"
+    if channel != "stable":
+        body = ("Pre-release on the %s channel. Devices on that channel install it from their own "
+                "page (System > Firmware update); the files below are for a manual upload.\n\n" % channel) + body
+    if bench:
+        body += "\n" + bench + "\n"
     footer = (cfg.get("stable_mirror") or {}).get("footer")
     if footer:
         fpath = os.path.join(repo_root, footer)
@@ -421,6 +501,52 @@ def mirror_body(repo_root, cfg, notes_text, version, contributors):
     if contributors:
         body += "\nContributors: " + " ".join(contributors) + "\n"
     return body
+
+
+def make_mirror(gh, cfg, repo_root, version, notes_text, contributors, image, image_sha,
+                zip_data, zip_sha, channel, resume, bench=""):
+    """The release on the firmware repo that people browse: the source tag,
+    the product name, the notes as the body, the same files. A pre-release
+    for alfa and beta (the legacy 4.5x page already sees the old alfas there,
+    and testers look there: Ali, 2026-10-21), a release for stable."""
+    m = cfg.get("stable_mirror") or {}
+    n = names(cfg, version)
+    prerelease = channel != "stable"
+    body = mirror_body(repo_root, cfg, notes_text, version, contributors, channel, bench)
+    rel = ensure_release(gh, m["repo"], n["mirror_tag"], n["mirror_name"], body, prerelease, resume, False)
+    fields = {}
+    if bool(rel.get("prerelease")) != prerelease:
+        fields["prerelease"] = prerelease
+    if (rel.get("body") or "").strip() != body.strip():
+        fields["body"] = body
+    if rel.get("name") != n["mirror_name"]:
+        fields["name"] = n["mirror_name"]
+    if fields:
+        gh.patch_release(m["repo"], rel["id"], fields)
+    ensure_asset(gh, m["repo"], rel, n["asset"], image, image_sha, False)
+    if zip_data:
+        ensure_asset(gh, m["repo"], rel, n["zip"], zip_data, zip_sha, False)
+    say("  mirror %s on %s is complete (%s)" % (n["mirror_tag"], m["repo"], "pre-release" if prerelease else "release"))
+
+
+def fetch_release_files(gh, rel, n):
+    """The image (and zip) of a manifest entry, downloaded from where the
+    manifest points and checked against the recorded sha256."""
+    with tempfile.TemporaryDirectory(prefix="fwpub_") as tmp:
+        img = os.path.join(tmp, n["asset"])
+        gh.download(rel["image"]["url"], img, expect_size=rel["image"]["size"])
+        image = _read(img)
+        if hashlib.sha256(image).hexdigest() != rel["image"]["sha256"]:
+            raise Fatal("the stored image does not match its sha256")
+        zip_data = None
+        fz = rel.get("flash_zip")
+        if fz:
+            zp = os.path.join(tmp, n["zip"] or "flash.zip")
+            gh.download(fz["url"], zp, expect_size=fz["size"])
+            zip_data = _read(zp)
+            if hashlib.sha256(zip_data).hexdigest() != fz["sha256"]:
+                raise Fatal("the stored flash zip does not match its sha256")
+    return image, zip_data
 
 
 # ---- commands ---------------------------------------------------------------------------
@@ -465,7 +591,8 @@ def cmd_publish(a, repo_root, cfg, devices_root, token):
 
     # 3. the release that holds the files
     rel = ensure_release(gh, cfg["devices_repo"], p.n["devices_tag"], p.n["release_name"],
-                         devices_body(cfg, p.version, a.channel), a.channel != "stable", a.resume, False)
+                         devices_body(cfg, p.version, a.channel, bench_line(p)), a.channel != "stable",
+                         a.resume, False)
     ensure_asset(gh, cfg["devices_repo"], rel, p.n["asset"], p.image, p.image_sha, False)
     if p.zip:
         ensure_asset(gh, cfg["devices_repo"], rel, p.n["zip"], p.zip, p.zip_sha, False)
@@ -498,15 +625,10 @@ def cmd_publish(a, repo_root, cfg, devices_root, token):
         gitops.push(devices_root, "main")
         say("  pushed; devices on channel %s see %s at their next check" % (a.channel, p.version))
 
-    # 6. the stable mirror
-    if a.channel == "stable" and cfg.get("stable_mirror"):
-        m = cfg["stable_mirror"]
-        mrel = ensure_release(gh, m["repo"], p.n["mirror_tag"], p.n["mirror_name"],
-                              mirror_body(repo_root, cfg, p.notes_text, p.version, p.contributors), False, a.resume, False)
-        ensure_asset(gh, m["repo"], mrel, p.n["asset"], p.image, p.image_sha, False)
-        if p.zip:
-            ensure_asset(gh, m["repo"], mrel, p.n["zip"], p.zip, p.zip_sha, False)
-        say("  mirror release %s on %s is complete" % (p.n["mirror_tag"], m["repo"]))
+    # 6. the release people browse on the firmware repo
+    if cfg.get("stable_mirror") and (a.channel == "stable" or cfg.get("mirror_prereleases", True)):
+        make_mirror(gh, cfg, repo_root, p.version, p.notes_text, p.contributors, p.image, p.image_sha,
+                    p.zip, p.zip_sha, a.channel, a.resume, bench_line(p))
     say("published %s %s (%s)" % (cfg["model"], p.version, a.channel))
     return 0
 
@@ -570,24 +692,47 @@ def cmd_promote(a, repo_root, cfg, devices_root, token):
     except github.GitHubError as exc:
         say("  warning: could not update the devices release: %s" % exc)
         drel = None
-    if a.to == "stable" and cfg.get("stable_mirror") and drel is not None:
-        m = cfg["stable_mirror"]
-        with tempfile.TemporaryDirectory(prefix="fwpub_") as tmp:
-            img = os.path.join(tmp, n["asset"])
-            gh.download(rel2["image"]["url"], img, expect_size=rel2["image"]["size"])
-            data = _read(img)
-            if hashlib.sha256(data).hexdigest() != rel2["image"]["sha256"]:
-                raise Fatal("the stored image does not match its sha256")
-            notes_path = os.path.join(devices_root, cfg["slug"], "firmware", "notes", a.version + ".md")
-            body = mirror_body(repo_root, cfg, _read(notes_path).decode("utf-8"), a.version, [])
-            mrel = ensure_release(gh, m["repo"], n["mirror_tag"], n["mirror_name"], body, False, True, False)
-            ensure_asset(gh, m["repo"], mrel, n["asset"], data, rel2["image"]["sha256"], False)
-            fz = rel2.get("flash_zip")
-            if fz:
-                zp = os.path.join(tmp, n["zip"])
-                gh.download(fz["url"], zp, expect_size=fz["size"])
-                ensure_asset(gh, m["repo"], mrel, n["zip"], _read(zp), fz["sha256"], False)
-        say("  mirror release %s on %s is complete" % (n["mirror_tag"], m["repo"]))
+    if cfg.get("stable_mirror") and drel is not None and (a.to == "stable" or cfg.get("mirror_prereleases", True)):
+        image, zip_data = fetch_release_files(gh, rel2, n)
+        notes_path = os.path.join(devices_root, cfg["slug"], "firmware", "notes", a.version + ".md")
+        make_mirror(gh, cfg, repo_root, a.version, _read(notes_path).decode("utf-8"), [], image,
+                    rel2["image"]["sha256"], zip_data, (rel2.get("flash_zip") or {}).get("sha256"), a.to, True)
+    return 0
+
+
+def cmd_mirror(a, repo_root, cfg, devices_root, token):
+    """Create (or complete) the release on the firmware repo for a version
+    the manifest already carries: the files are fetched from where the
+    manifest points and checked, the notes come from the devices checkout."""
+    if not cfg.get("stable_mirror"):
+        raise Fatal("release.json has no stable_mirror block")
+    mpath = os.path.join(devices_root, cfg["slug"], "firmware", "manifest.json")
+    doc = manifest_mod.load(mpath)
+    rel = manifest_mod.find(doc, a.version)
+    if rel is None:
+        raise Fatal("the manifest does not carry %s" % a.version)
+    if rel.get("yanked"):
+        raise Fatal("%s is yanked" % a.version)
+    n = names(cfg, a.version)
+    say("mirror %s %s (%s) on %s as %s" % (cfg["model"], a.version, rel.get("channel"),
+                                           cfg["stable_mirror"]["repo"], n["mirror_tag"]))
+    if a.dry_run:
+        say("dry run: nothing created")
+        return 0
+    if not token:
+        raise Fatal("no token: set MEATPI_RELEASE_TOKEN or pass --token-file")
+    gh = github.GitHub(token=token)
+    image, zip_data = fetch_release_files(gh, rel, n)
+    notes_path = os.path.join(devices_root, cfg["slug"], "firmware", "notes", a.version + ".md")
+    if not os.path.isfile(notes_path):
+        raise Fatal("no notes file %s" % notes_path)
+    src = os.path.join(repo_root, "release-notes", a.version + ".md")
+    contributors = []
+    if os.path.isfile(src):
+        contributors = notes_mod.split_front_matter(_read(src).decode("utf-8"))[0].get("contributors") or []
+    make_mirror(gh, cfg, repo_root, a.version, _read(notes_path).decode("utf-8"), contributors, image,
+                rel["image"]["sha256"], zip_data, (rel.get("flash_zip") or {}).get("sha256"),
+                rel.get("channel"), True)
     return 0
 
 
@@ -731,6 +876,13 @@ def build_parser():
     def common(sp, build=True):
         sp.add_argument("--dry-run", action="store_true")
         sp.add_argument("--no-push", action="store_true")
+        sp.add_argument("--no-release-test", action="store_true",
+                        help="publish without a fresh RELEASE TEST PASS record for the image (the release "
+                             "bodies say 'Not bench-tested')")
+        # the two global flags again, so they work after the subcommand too
+        # (SUPPRESS keeps a value given before it)
+        sp.add_argument("--token-file", default=argparse.SUPPRESS)
+        sp.add_argument("--devices", default=argparse.SUPPRESS)
         if build:
             sp.add_argument("--channel", default="alfa", choices=versions.CHANNELS)
             sp.add_argument("--no-build", action="store_true", help="reuse build/ (it must come from HEAD)")
@@ -754,6 +906,9 @@ def build_parser():
     nt.add_argument("--file", help="another source file than release-notes/<version>.md")
     nt.add_argument("--summary", help="a new summary (default: the file's front matter)")
     common(nt, build=False)
+    mr = sub.add_parser("mirror", help="create the release on the firmware repo for a published version")
+    mr.add_argument("version")
+    common(mr, build=False)
     return ap
 
 
@@ -775,6 +930,8 @@ def main(argv, repo_root, config_path, devices_root=None):
             return cmd_yank(a, repo_root, cfg, devices_root, token)
         if a.cmd == "notes":
             return cmd_notes(a, repo_root, cfg, devices_root, token)
+        if a.cmd == "mirror":
+            return cmd_mirror(a, repo_root, cfg, devices_root, token)
     except github.GitHubError as exc:
         raise Fatal(str(exc))
     except gitops.GitError as exc:
