@@ -4,19 +4,54 @@
   "model": "ESPNetLink",
   "project_name": "espnetlink-fw",
   "source_repo": "meatpiHQ/espnetlink-fw",
-  "updated": "2026-10-21T13:13:14Z",
+  "updated": "2026-10-23T14:19:48Z",
   "channels": {
     "stable": {
-      "latest": "1.23.0"
+      "latest": "1.23.1"
     },
     "beta": {
-      "latest": "1.23.0"
+      "latest": "1.23.1"
     },
     "alfa": {
-      "latest": "1.23.0"
+      "latest": "1.23.1"
     }
   },
   "releases": [
+    {
+      "version": "1.23.1",
+      "fw_version": "1.23.1",
+      "fw_build": "v1.23.1",
+      "commit": "0a8ce4db4357d33ca50713ee16fd636625291761",
+      "tag": "v1.23.1",
+      "channel": "stable",
+      "date": "2026-10-23",
+      "summary": "The status LED is amber while the mobile network is still connecting; it used to read as a green that looked like an uplink already up.",
+      "notes": "espnetlink/firmware/notes/1.23.1.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/espnetlink-1.23.1/espnetlink-fw_v1.23.1.bin",
+        "size": 1922480,
+        "sha256": "e9b221bd12430b6d609ed6f600edda0b188112e9c00655eb29be324ba0c67e63",
+        "project_name": "espnetlink-fw"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/espnetlink-1.23.1/espnetlink-fw_v1.23.1.zip",
+        "size": 1209776,
+        "sha256": "5044e4a095216012ff030f4b6a9f8cd373679bd331de1b7a9db4ee5d3ef26985"
+      },
+      "bootloader": {
+        "sha256": "270862e55969adc7588432c8c97933d326f2f65814f049c44255b33f6c931460"
+      },
+      "layout": {
+        "md5": "4ab851ed091a20b0eb35046eba065189",
+        "table": "espnetlink/firmware/layouts/4ab851ed091a20b0eb35046eba065189.csv"
+      },
+      "layout_from": {
+        "fc90a384ddaa5a6c032cf16e27bdbb05": {
+          "migration": "serial"
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "1.23.0",
       "fw_version": "1.23.0",
