@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-10-21T09:36:33Z",
+  "updated": "2026-10-24T15:19:11Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.2"
+      "latest": "6.0.0-beta.3"
     },
     "alfa": {
-      "latest": "6.0.0-beta.2"
+      "latest": "6.0.0-beta.3"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.3",
+      "fw_version": "6.0.0-beta.3",
+      "fw_build": "v6.0.0p-beta.3",
+      "commit": "74d6859540cd78928318256fa9d0de2779ec438f",
+      "tag": "v6.0.0p-beta.3",
+      "channel": "beta",
+      "date": "2026-10-24",
+      "summary": "Third beta of v6: vehicle profiles decode as written again (multi-frame PIDs), plus ESPNetLink link and USB receive fixes.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.3.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.3/wican-fw_obd_pro_v6.0.0-beta.3.bin",
+        "size": 3836768,
+        "sha256": "abe3d1b0459c1d8af134df46ce954044c746ff11fc318616a4c1b4cfa0de2e69",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.3/wican-fw_obd_pro_v6.0.0-beta.3.zip",
+        "size": 2329216,
+        "sha256": "c99bc5aadf4d615aef77686444dab337cdaf183fbb6069f822b6337997de0d05"
+      },
+      "bootloader": {
+        "sha256": "ed8aec43859990915f88d943ba5d6b497a1e422637600da388f5eb7546319f27"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.2",
       "fw_version": "6.0.0-beta.2",
