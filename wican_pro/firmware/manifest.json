@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-10-24T15:19:11Z",
+  "updated": "2026-10-25T08:03:54Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.3"
+      "latest": "6.0.0-beta.4"
     },
     "alfa": {
-      "latest": "6.0.0-beta.3"
+      "latest": "6.0.0-beta.4"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.4",
+      "fw_version": "6.0.0-beta.4",
+      "fw_build": "v6.0.0p-beta.4",
+      "commit": "3fbc944f32c0f2b213b6170c5734d4dbeb499367",
+      "tag": "v6.0.0p-beta.4",
+      "channel": "beta",
+      "date": "2026-10-25",
+      "summary": "Fourth beta of v6: an SD card the device cannot read (exFAT, cards over 32 GB) is named and formatted from the web UI.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.4.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.4/wican-fw_obd_pro_v6.0.0-beta.4.bin",
+        "size": 3846384,
+        "sha256": "4363adfabb82b7a635af3945b1be77dfd973cfa68f24e117c864051a3194f65b",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.4/wican-fw_obd_pro_v6.0.0-beta.4.zip",
+        "size": 2337056,
+        "sha256": "d8714b17d38614ab562ae1519dbbf8334d68c38fdb9e47eecd0bf812b6da743e"
+      },
+      "bootloader": {
+        "sha256": "fbf9af9f4b1674e02c777390570db747321b6ee2d7bd94013f02a0203db7dc10"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.3",
       "fw_version": "6.0.0-beta.3",
