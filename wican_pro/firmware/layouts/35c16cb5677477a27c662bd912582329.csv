@@ -2,7 +2,7 @@
 # device_type: wican_pro
 # name: v6 (settings and storage LittleFS)
 # first_seen: 6.0.0-alfa.6
-# last_seen: 6.0.0-beta.4
+# last_seen: 6.0.0-beta.5
 # source: wican_pro_partitions_table.csv (branch dev-v6)
 # name,type,subtype,offset,size,flags
 nvs,0x01,0x02,0x9000,0x4000,0x0

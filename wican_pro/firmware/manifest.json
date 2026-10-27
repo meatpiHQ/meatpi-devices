@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-10-25T08:03:54Z",
+  "updated": "2026-10-27T08:26:04Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.4"
+      "latest": "6.0.0-beta.5"
     },
     "alfa": {
-      "latest": "6.0.0-beta.4"
+      "latest": "6.0.0-beta.5"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.5",
+      "fw_version": "6.0.0-beta.5",
+      "fw_build": "v6.0.0p-beta.5",
+      "commit": "ad62f0e8f709550c9a840dd3b9120beecdfed4b7",
+      "tag": "v6.0.0p-beta.5",
+      "channel": "beta",
+      "date": "2026-10-27",
+      "summary": "Fifth beta of v6: the Quick Setup asks which car first, a full factory reset, J2534 reprogramming ungated, profile CAN filters.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.5.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.5/wican-fw_obd_pro_v6.0.0-beta.5.bin",
+        "size": 3881136,
+        "sha256": "32da1bb5d4d18dfc31c8c70132018020f1a31249546d0433ca2b7e61978ad24c",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.5/wican-fw_obd_pro_v6.0.0-beta.5.zip",
+        "size": 2361213,
+        "sha256": "3245f6e51091a3d1df4cceb1f735c7fdfc2d88699e765433fc7f41d960744478"
+      },
+      "bootloader": {
+        "sha256": "bcdea4413f781ea2acdc6d0b88ae065ac8622c683208a1f540523b3976e5c0ef"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.4",
       "fw_version": "6.0.0-beta.4",
