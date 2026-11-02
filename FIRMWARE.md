@@ -61,7 +61,7 @@ A release:
 | `promoted` | no | `{"beta": "YYYY-MM-DD", "stable": "YYYY-MM-DD"}` as applicable |
 | `date` | yes | first publication, `YYYY-MM-DD`, not in the future |
 | `summary` | yes | one plain sentence, at most 140 characters |
-| `notes` | yes | `<device_type>/firmware/notes/<version>.md`, 1 to 16 KiB |
+| `notes` | yes | `<device_type>/firmware/notes/<version>.md`, 1 to 64 KiB |
 | `requires` | no | `{"min_version": "<version>"}`: a unit below it installs a stepping stone first |
 | `image` | yes | `url` (https), `size`, `sha256`, `project_name` (what the image's descriptor says) |
 | `flash_zip` | no | `url`, `size`, `sha256` of the serial flash set (bootloader, table, otadata, image) |
@@ -131,10 +131,11 @@ one serial flash of a 1.23 or newer release first.
 
 ## Release notes
 
-`notes/<version>.md` is rendered by the device's own web page, which may
-have no internet, so: the first line `# <Model> <version>`, then `##`
+`notes/<version>.md` is fetched from this repository and rendered by the
+device's own web page with a small Markdown renderer (the device never
+downloads it), so: the first line `# <Model> <version>`, then `##`
 headings, `-` lists, `**bold**` and `[links](https://...)` only; no HTML,
-images or tables; at most 16 KiB; no long dash anywhere (the validator
+images or tables; at most 64 KiB; no long dash anywhere (the validator
 refuses U+2013 and U+2014 in a notes file and in every manifest string).
 The publisher writes the "Before you update" block from the layout
 verdicts, so a user reads a sentence about their own units instead of an

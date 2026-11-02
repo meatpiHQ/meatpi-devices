@@ -1,8 +1,10 @@
 """Release notes: the front matter of a firmware repo's
 `release-notes/<version>.md`, the rules a published
-`<slug>/firmware/notes/<version>.md` must keep (a DEVICE proxies the file to
-a browser that may have no internet and renders it itself, so only a small
-Markdown subset), the generated "Before you update" block, and the
+`<slug>/firmware/notes/<version>.md` must keep (a device's web page fetches
+the file from GitHub and renders it with its own small Markdown renderer,
+so only a small Markdown subset; the device itself never holds it, so the
+cap is the page's: 64 KiB since 2026-11-02, 16 KiB before, when the device
+proxied the file), the generated "Before you update" block, and the
 conversion of a GitHub release body into a notes file. Stdlib only.
 """
 
@@ -10,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-MAX_NOTES_BYTES = 16384
+MAX_NOTES_BYTES = 65536
 MAX_SUMMARY_CHARS = 140
 LONG_DASHES = chr(0x2013) + chr(0x2014) + chr(0x2015)
 
@@ -82,7 +84,7 @@ def strip_front_matter(text):
 
 def check_notes(text, model, version):
     """The problems of a published notes file (strings), empty when it
-    keeps every rule: the first line `# <Model> <version>`, 1 to 16 KiB,
+    keeps every rule: the first line `# <Model> <version>`, 1 to 64 KiB,
     no HTML, no images, no tables, headings `#` and `##` only, no long
     dash. A numbered list is reported as a warning prefixed `warning:`."""
     problems = []
@@ -241,7 +243,7 @@ def self_test():
     p = check_notes("# Wrong\n\n### deep\n<b>x</b>\n![i](u)\n| a |\n1. one\n" + chr(0x2014) + "\n", "WiCAN PRO", "6.1.0")
     assert len([x for x in p if not x.startswith("warning:")]) == 6, p
     assert any(x.startswith("warning:") for x in p), p
-    assert "cap" in check_notes("# M 1.0.0\n" + "x" * 17000 + "\n", "M", "1.0.0")[0]
+    assert "cap" in check_notes("# M 1.0.0\n" + "x" * 70000 + "\n", "M", "1.0.0")[0]
     assert check_summary("Fine.") == []
     assert any("140" in x for x in check_summary("x" * 141))
     assert replace_dashes("4.40" + chr(0x2013) + "4.52 and a " + chr(0x2014) + " b") == "4.40 to 4.52 and a, b"
@@ -249,7 +251,7 @@ def self_test():
     assert text == "# WiCAN PRO 4.51.0\n\n## New Features:\n- one\n- two\n\n## Deep\n", repr(text)
     assert check_notes(text, "WiCAN PRO", "4.51.0") == []
     assert from_github_body("", "ESPNetLink", "1.20.0", "Public release.") == "# ESPNetLink 1.20.0\n\nPublic release.\n"
-    long = from_github_body("- x\n" * 9000, "M", "1.0.0")
+    long = from_github_body("- x\n" * 30000, "M", "1.0.0")
     assert len(long.encode()) <= MAX_NOTES_BYTES and "shortened" in long
     lines = layout_sentences({"a" * 32: {"migration": "wipe", "wipes": ["storage"]},
                               "b" * 32: {"migration": "serial"},
