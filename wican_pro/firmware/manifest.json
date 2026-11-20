@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-11-08T07:33:11Z",
+  "updated": "2026-11-20T07:44:04Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.8"
+      "latest": "6.0.0-beta.12"
     },
     "alfa": {
-      "latest": "6.0.0-beta.8"
+      "latest": "6.0.0-beta.12"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.12",
+      "fw_version": "6.0.0-beta.12",
+      "fw_build": "v6.0.0p-beta.12",
+      "commit": "53bef801e1de2624badbf3b383d78f1a0ae8bde0",
+      "tag": "v6.0.0p-beta.12",
+      "channel": "beta",
+      "date": "2026-11-20",
+      "summary": "Twelfth beta: VW TP 2.0 and ISO 15765 flow control for J2534 tools, Windows driver 1.10.0, and an https rule post no longer restarts.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.12.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.12/wican-fw_obd_pro_v6.0.0-beta.12.bin",
+        "size": 4180304,
+        "sha256": "3543e0fb077c2af7ac3f7f0407ea20286fa87c170c0164c3ed93168c6baa085b",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.12/wican-fw_obd_pro_v6.0.0-beta.12.zip",
+        "size": 2562844,
+        "sha256": "b3c70666281d96c759f851635e507316e40f10248bcd8c668a5fe3f62d856bb7"
+      },
+      "bootloader": {
+        "sha256": "91f82998b716dc3ebfbc6188559e5fd5a676428730cf0cd5d53bc6e81a12a1b9"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.8",
       "fw_version": "6.0.0-beta.8",
