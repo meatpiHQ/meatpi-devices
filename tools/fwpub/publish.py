@@ -1,8 +1,10 @@
 """The publisher behind each firmware repository's `tools/release.py`:
 
     release.py check                        the local checks; prints the release it would add
-    release.py publish --channel alfa       build, check, tag, upload, manifest, commit, push,
-                                            and the pre-release people browse on the firmware repo
+    release.py publish --channel alfa       build, check, tag (the firmware and, when release.json
+                                            names one, its components repository), upload, manifest,
+                                            commit, push, and the pre-release people browse on the
+                                            firmware repo
     release.py publish --channel stable     the same, the firmware repo's entry a release with the footer
     release.py mirror 6.0.0-beta.1          (re)create the firmware repo's entry for a published version
     release.py promote 6.1.0-beta.2 --to stable
@@ -57,6 +59,9 @@ def load_config(path):
     cfg.setdefault("keep_in_manifest", manifest_mod.KEEP_DEFAULT)
     cfg.setdefault("chip", "esp32s3")
     cfg.setdefault("release_test", {})
+    comp = cfg.get("components")
+    if comp is not None and not (isinstance(comp, dict) and comp.get("repo")):
+        raise Fatal('%s: "components" needs a "repo" (owner/name)' % path)
     return cfg
 
 
@@ -128,11 +133,144 @@ def names(cfg, version):
     if mirror:
         out["mirror_tag"] = (mirror.get("tag") or "v{version_tagged}").format(**fmt)
         out["mirror_name"] = (mirror.get("name") or "{model} {version}").format(model=cfg["model"], **fmt)
+    comp = cfg.get("components") or {}
+    if comp:
+        out["components_tag"] = (comp.get("tag") or "{source_tag}").format(
+            source_tag=out["source_tag"], slug=cfg["slug"], **fmt)
     return out
 
 
 def asset_url(repo, tag, name):
     return "https://github.com/%s/releases/download/%s/%s" % (repo, tag, name)
+
+
+# ---- the components repository's tag (2026-11-20) --------------------------------------
+# A firmware whose components live in a repository of their own
+# (release.json "components": {"repo": "owner/name", "tag": "{source_tag}"})
+# is only buildable again with the components commit it was built from. The
+# publish gives that commit the release's tag, so the two tags name one build.
+
+def _same_repo(url, repo):
+    """Whether a remote url names `repo` (owner/name), https or ssh."""
+    u = (url or "").strip().lower().rstrip("/")
+    if u.endswith(".git"):
+        u = u[:-4]
+    r = repo.strip().lower()
+    return u.endswith("/" + r) or u.endswith(":" + r)
+
+
+def _under(path, root):
+    try:
+        a = os.path.normcase(os.path.abspath(path))
+        b = os.path.normcase(os.path.abspath(root))
+        return os.path.commonpath([a, b]) == b
+    except ValueError:
+        return False
+
+
+def outside_component_dirs(repo_root, pd):
+    """The folders the build took components from that belong neither to
+    the firmware checkout nor to ESP-IDF, from the build's own list
+    (build/project_description.json): what was compiled, not what happens
+    to sit where a components tree is expected."""
+    idf = pd.get("idf_path") or ""
+    out = set()
+    for info in (pd.get("build_component_info") or {}).values():
+        d = (info or {}).get("dir") or ""
+        if d and not _under(d, repo_root) and not (idf and _under(d, idf)):
+            out.add(os.path.dirname(os.path.abspath(d)))
+    return sorted(out)
+
+
+def components_checkout(repo_root, comp_repo, pd):
+    """(the checkout of `comp_repo` the build compiled or "", the other
+    outside folders it took components from)."""
+    found, others = "", []
+    for d in outside_component_dirs(repo_root, pd):
+        top = gitops.toplevel(d) if os.path.isdir(d) else ""
+        if top and _same_repo(gitops.remote_url(top), comp_repo):
+            if found and os.path.normcase(os.path.abspath(top)) != os.path.normcase(os.path.abspath(found)):
+                raise Fatal("the build took components from two checkouts of %s: %s and %s" % (comp_repo, found, top))
+            found = top
+        else:
+            others.append(top or d)
+    return found, others
+
+
+def plan_components(repo_root, cfg, p, pd, image_path, dry_run):
+    """The checks behind the components tag, and what the publish will do
+    with it: {"repo", "root", "head", "tag", "state"}, the state one of
+    "create" (tag and push), "local" (push the tag that is there) and
+    "pushed" (origin carries it on this commit already)."""
+    repo, tag = cfg["components"]["repo"], p.n["components_tag"]
+
+    def stop(msg):
+        if dry_run:
+            p.warnings.append(msg)
+        else:
+            raise Fatal(msg)
+
+    root, others = components_checkout(repo_root, repo, pd)
+    for o in others:
+        p.warnings.append("the build also took components from %s, which this release does not tag" % o)
+    if not root:
+        raise Fatal("the build took no component from a checkout of %s (release.json \"components\")" % repo)
+    head = gitops.head_sha(root)
+    dirty = gitops.dirty_paths(root)
+    if dirty:
+        stop("the components checkout %s has %d uncommitted path(s): %s (the tag would name other sources than the image's)"
+             % (root, len(dirty), ", ".join(d[3:] for d in dirty[:4])))
+    if gitops.commit_time(root) > os.path.getmtime(image_path):
+        stop("the components checkout's HEAD %s was committed after the image in build/ was written: "
+             "the image does not come from it (build and test again)" % head[:7])
+    state = "create"
+    if gitops.tag_exists(root, tag):
+        if gitops.tag_commit(root, tag) != head:
+            raise Fatal("the components checkout carries the tag %s on %s, its HEAD is %s"
+                        % (tag, gitops.tag_commit(root, tag)[:7], head[:7]))
+        state = "local"
+    if gitops.fetch(root):
+        if not gitops.remote_branches_with(root, head):
+            stop("the components checkout's HEAD %s is on no branch of origin: push %s first" % (head[:7], repo))
+        remote = gitops.remote_tag_commit(root, tag)
+        if remote and remote != head:
+            raise Fatal("origin of %s carries the tag %s on %s, the build's components are %s"
+                        % (repo, tag, remote[:7], head[:7]))
+        if remote:
+            state = "pushed"
+    else:
+        p.warnings.append("could not fetch %s (offline?)" % repo)
+    p.actions.append({
+        "create": "tag %s %s at %s (the checkout the build compiled: %s) and push the tag",
+        "local": "push the tag of %s, %s at %s (the checkout the build compiled: %s)",
+        "pushed": "%s carries the tag %s at %s already (the checkout the build compiled: %s)",
+    }[state] % (repo, tag, head[:7], root))
+    return {"repo": repo, "root": root, "head": head, "tag": tag, "state": state}
+
+
+def source_line(cfg, version, markdown=False):
+    """One sentence for the release bodies: the two tags a build of this
+    release starts from. Only for a product with a components repository."""
+    comp = cfg.get("components") or {}
+    if not comp:
+        return ""
+    n = names(cfg, version)
+
+    def ref(repo, tag):
+        url = "https://github.com/%s/tree/%s" % (repo, tag)
+        return "[%s %s](%s)" % (repo, tag, url) if markdown else "%s %s (%s)" % (repo, tag, url)
+
+    return "Source: %s, built with %s. To build this release, check out those two tags." % (
+        ref(cfg["source_repo"], n["source_tag"]), ref(comp["repo"], n["components_tag"]))
+
+
+def source_line_if_tagged(gh, cfg, version, markdown=True):
+    """The source line for a release made earlier: only when the components
+    repository carries that release's tag."""
+    comp = cfg.get("components") or {}
+    if not comp or not gh.commit_for_tag(comp["repo"], names(cfg, version)["components_tag"]):
+        return ""
+    return source_line(cfg, version, markdown)
 
 
 # ---- the preparation shared by check and publish ---------------------------------------
@@ -286,6 +424,10 @@ def prepare(a, repo_root, cfg, devices_root, dry_run):
     p.image_sha = hashlib.sha256(image).hexdigest()
     p.fw_build = gitops.describe(repo_root)
 
+    # the components repository: the checkout this build compiled gets the
+    # release's tag (2026-11-20)
+    p.components = plan_components(repo_root, cfg, p, pd, image_path, dry_run) if cfg.get("components") else None
+
     # the release test's record for these bytes (2026-10-21): check warns,
     # publish refuses, --no-release-test publishes with a mark in the bodies
     p.release_test = None
@@ -419,6 +561,10 @@ def print_plan(p, cfg, a):
     say("release %s %s on channel %s (tag %s, build %s)" % (cfg["model"], p.version, a.channel, p.n["source_tag"], p.fw_build))
     say("  image %d B sha256 %s, layout %s%s" % (len(p.image), p.image_sha[:16], p.md5[:8], " (new)" if p.new_layout else ""))
     say("  release test: %s" % (bench_line(p) or ("not required" if not (cfg.get("release_test") or {}).get("required") else "no fresh PASS record")))
+    if p.components:
+        say("  components: %s at %s, tag %s (%s)" % (
+            p.components["repo"], p.components["head"][:7], p.components["tag"],
+            {"create": "to create and push", "local": "to push", "pushed": "on origin"}[p.components["state"]]))
     for md5, v in sorted(p.layout_from.items()):
         say("  from layout %s: %s%s" % (md5[:8], v["migration"], (" " + ", ".join(v.get("wipes") or [])) if v.get("wipes") else ""))
     say("  notes %d B, summary: %s" % (len(p.notes_text.encode("utf-8")), p.summary))
@@ -476,22 +622,26 @@ def ensure_asset(gh, repo, rel, name, data, sha, dry_run):
                     % (name, up.get("size"), d, len(data), sha))
 
 
-def devices_body(cfg, version, channel, bench=""):
+def devices_body(cfg, version, channel, bench="", source=""):
     body = ("%s firmware %s, channel %s.\nRelease notes: https://github.com/%s/blob/main/%s/firmware/notes/%s.md\n"
             "Install from the device's web page, or let the device update itself."
             % (cfg["model"], version, channel, cfg["devices_repo"], cfg["slug"], version))
     if bench:
         body += "\n" + bench
+    if source:
+        body += "\n" + source
     return body
 
 
-def mirror_body(repo_root, cfg, notes_text, version, contributors, channel="stable", bench=""):
+def mirror_body(repo_root, cfg, notes_text, version, contributors, channel="stable", bench="", source=""):
     body = notes_text.rstrip("\n") + "\n"
     if channel != "stable":
         body = ("Pre-release on the %s channel. Devices on that channel install it from their own "
                 "page (System > Firmware update); the files below are for a manual upload.\n\n" % channel) + body
     if bench:
         body += "\n" + bench + "\n"
+    if source:
+        body += "\n" + source + "\n"
     footer = (cfg.get("stable_mirror") or {}).get("footer")
     if footer:
         fpath = os.path.join(repo_root, footer)
@@ -504,7 +654,7 @@ def mirror_body(repo_root, cfg, notes_text, version, contributors, channel="stab
 
 
 def make_mirror(gh, cfg, repo_root, version, notes_text, contributors, image, image_sha,
-                zip_data, zip_sha, channel, resume, bench=""):
+                zip_data, zip_sha, channel, resume, bench="", source=""):
     """The release on the firmware repo that people browse: the source tag,
     the product name, the notes as the body, the same files. A pre-release
     for alfa and beta (the legacy 4.5x page already sees the old alfas there,
@@ -512,7 +662,7 @@ def make_mirror(gh, cfg, repo_root, version, notes_text, contributors, image, im
     m = cfg.get("stable_mirror") or {}
     n = names(cfg, version)
     prerelease = channel != "stable"
-    body = mirror_body(repo_root, cfg, notes_text, version, contributors, channel, bench)
+    body = mirror_body(repo_root, cfg, notes_text, version, contributors, channel, bench, source)
     rel = ensure_release(gh, m["repo"], n["mirror_tag"], n["mirror_name"], body, prerelease, resume, False)
     fields = {}
     if bool(rel.get("prerelease")) != prerelease:
@@ -588,10 +738,19 @@ def cmd_publish(a, repo_root, cfg, devices_root, token):
         say("  tagged %s and pushed the tag" % p.n["source_tag"])
         p.fw_build = gitops.describe(repo_root)
         p.release["fw_build"] = p.fw_build
+    c = p.components
+    if c and c["state"] != "pushed":
+        if c["state"] == "create":
+            gitops.create_tag(c["root"], c["tag"], "%s %s (%s %s, %s)" % (
+                cfg["model"], p.version, cfg["source_repo"], p.n["source_tag"], p.head[:12]))
+        gitops.push(c["root"], "refs/tags/" + c["tag"])
+        say("  tagged %s %s at %s and pushed the tag" % (c["repo"], c["tag"], c["head"][:7]))
 
     # 3. the release that holds the files
     rel = ensure_release(gh, cfg["devices_repo"], p.n["devices_tag"], p.n["release_name"],
-                         devices_body(cfg, p.version, a.channel, bench_line(p)), a.channel != "stable",
+                         devices_body(cfg, p.version, a.channel, bench_line(p),
+                                      source_line(cfg, p.version) if p.components else ""),
+                         a.channel != "stable",
                          a.resume, False)
     ensure_asset(gh, cfg["devices_repo"], rel, p.n["asset"], p.image, p.image_sha, False)
     if p.zip:
@@ -628,7 +787,8 @@ def cmd_publish(a, repo_root, cfg, devices_root, token):
     # 6. the release people browse on the firmware repo
     if cfg.get("stable_mirror") and (a.channel == "stable" or cfg.get("mirror_prereleases", True)):
         make_mirror(gh, cfg, repo_root, p.version, p.notes_text, p.contributors, p.image, p.image_sha,
-                    p.zip, p.zip_sha, a.channel, a.resume, bench_line(p))
+                    p.zip, p.zip_sha, a.channel, a.resume, bench_line(p),
+                    source_line(cfg, p.version, markdown=True) if p.components else "")
     say("published %s %s (%s)" % (cfg["model"], p.version, a.channel))
     return 0
 
@@ -696,7 +856,8 @@ def cmd_promote(a, repo_root, cfg, devices_root, token):
         image, zip_data = fetch_release_files(gh, rel2, n)
         notes_path = os.path.join(devices_root, cfg["slug"], "firmware", "notes", a.version + ".md")
         make_mirror(gh, cfg, repo_root, a.version, _read(notes_path).decode("utf-8"), [], image,
-                    rel2["image"]["sha256"], zip_data, (rel2.get("flash_zip") or {}).get("sha256"), a.to, True)
+                    rel2["image"]["sha256"], zip_data, (rel2.get("flash_zip") or {}).get("sha256"), a.to, True,
+                    source=source_line_if_tagged(gh, cfg, a.version))
     return 0
 
 
@@ -732,7 +893,7 @@ def cmd_mirror(a, repo_root, cfg, devices_root, token):
         contributors = notes_mod.split_front_matter(_read(src).decode("utf-8"))[0].get("contributors") or []
     make_mirror(gh, cfg, repo_root, a.version, _read(notes_path).decode("utf-8"), contributors, image,
                 rel["image"]["sha256"], zip_data, (rel.get("flash_zip") or {}).get("sha256"),
-                rel.get("channel"), True)
+                rel.get("channel"), True, source=source_line_if_tagged(gh, cfg, a.version))
     return 0
 
 
@@ -830,13 +991,56 @@ def cmd_notes(a, repo_root, cfg, devices_root, token):
         n = names(cfg, a.version)
         try:
             mrel = gh.release_by_tag(mirror["repo"], n["mirror_tag"])
-            gh.patch_release(mirror["repo"], mrel["id"], {"body": mirror_body(repo_root, cfg, body, a.version, meta.get("contributors") or [])})
+            gh.patch_release(mirror["repo"], mrel["id"], {"body": mirror_body(
+                repo_root, cfg, body, a.version, meta.get("contributors") or [],
+                source=source_line_if_tagged(gh, cfg, a.version))})
             say("  mirror release %s body updated" % n["mirror_tag"])
         except github.GitHubError as exc:
             say("  warning: the mirror release body was not updated: %s" % exc)
     elif rel.get("channel") == "stable" and mirror:
         say("  no token: update the mirror release body on %s yourself" % mirror["repo"])
     return 0
+
+
+# ---- vectors ----------------------------------------------------------------------------
+
+def self_test():
+    cfg = {"slug": "wican_pro", "model": "WiCAN PRO", "source_repo": "meatpiHQ/wican-fw", "hw_letter": "p",
+           "source_tag": "v{version_tagged}", "asset_name": "a_v{version}.bin", "zip_name": "",
+           "devices_repo": "meatpiHQ/meatpi-devices"}
+    v = "6.0.0-beta.12"
+    assert "components_tag" not in names(cfg, v) and source_line(cfg, v) == ""
+    cfg["components"] = {"repo": "meatpiHQ/meatpi-components"}
+    assert names(cfg, v)["components_tag"] == "v6.0.0p-beta.12"
+    assert names(cfg, "6.1.0")["components_tag"] == "v6.1.0p"
+    cfg["components"]["tag"] = "{slug}-{version}"
+    assert names(cfg, v)["components_tag"] == "wican_pro-6.0.0-beta.12"
+    del cfg["components"]["tag"]
+    line = source_line(cfg, v, markdown=True)
+    assert line.startswith("Source: [meatpiHQ/wican-fw v6.0.0p-beta.12]"
+                           "(https://github.com/meatpiHQ/wican-fw/tree/v6.0.0p-beta.12), built with "
+                           "[meatpiHQ/meatpi-components v6.0.0p-beta.12]"
+                           "(https://github.com/meatpiHQ/meatpi-components/tree/v6.0.0p-beta.12)."), line
+    plain = source_line(cfg, v)
+    assert "meatpiHQ/meatpi-components v6.0.0p-beta.12 (https://" in plain
+    assert devices_body(cfg, v, "beta", "Bench: x.", plain).endswith("Bench: x.\n" + plain)
+    assert devices_body(cfg, v, "beta").endswith("update itself.")
+    for url in ("https://github.com/meatpiHQ/meatpi-components.git", "https://github.com/MeatPiHQ/meatpi-components/",
+                "git@github.com:meatpiHQ/meatpi-components.git"):
+        assert _same_repo(url, "meatpiHQ/meatpi-components"), url
+    assert not _same_repo("https://github.com/meatpiHQ/meatpi-components-internal.git", "meatpiHQ/meatpi-components")
+    assert not _same_repo("https://github.com/other/meatpi-components.git", "meatpiHQ/meatpi-components")
+    assert not _same_repo("", "meatpiHQ/meatpi-components")
+    root = os.path.abspath(os.path.join("fw", "repo"))
+    idf = os.path.abspath("idf")
+    comps = os.path.join(os.path.abspath("comps"), "components")
+    assert _under(os.path.join(root, "main"), root) and _under(root, root) and not _under(root + "2", root)
+    pd = {"idf_path": idf, "build_component_info": {
+        "main": {"dir": os.path.join(root, "main")},
+        "esp_wifi": {"dir": os.path.join(idf, "components", "esp_wifi")},
+        "a": {"dir": os.path.join(comps, "a")}, "b": {"dir": os.path.join(comps, "b")}}}
+    assert outside_component_dirs(root, pd) == [comps], outside_component_dirs(root, pd)
+    return 1
 
 
 # ---- entry ------------------------------------------------------------------------------

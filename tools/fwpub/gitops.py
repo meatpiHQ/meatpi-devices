@@ -100,3 +100,38 @@ def remote_url(root):
         return run(root, "remote", "get-url", "origin")
     except GitError:
         return ""
+
+
+def toplevel(path):
+    """The root of the checkout that holds `path`, "" when it is in none."""
+    p = subprocess.run(["git", "-C", path, "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    return p.stdout.strip() if p.returncode == 0 else ""
+
+
+def commit_time(root, rev="HEAD"):
+    """The commit time of `rev`, seconds since the epoch."""
+    return int(run(root, "log", "-1", "--format=%ct", rev))
+
+
+def remote_branches_with(root, sha):
+    """origin's branches that hold `sha`, as of the last fetch: empty when
+    the commit was never pushed."""
+    out = run(root, "branch", "-r", "--contains", sha, check=False)
+    return [b.strip() for b in out.split("\n") if b.strip() and "->" not in b]
+
+
+def remote_tag_commit(root, name):
+    """The commit origin's tag `name` points at (through an annotated tag
+    too), "" when origin carries no such tag. Raises GitError when origin
+    does not answer."""
+    out = run(root, "ls-remote", "--tags", "origin", "refs/tags/" + name + "*")
+    plain = ""
+    for line in out.split("\n"):
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        if parts[1] == "refs/tags/" + name + "^{}":
+            return parts[0]
+        if parts[1] == "refs/tags/" + name:
+            plain = parts[0]
+    return plain

@@ -13,7 +13,7 @@
     publish    the publisher behind each firmware repo's tools/release.py
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = ["versions", "layout", "manifest", "notes", "appdesc", "github", "flashset", "gitops", "publish"]
 
 from . import appdesc, flashset, github, gitops, layout, manifest, notes, publish, versions  # noqa: E402,F401
@@ -22,7 +22,7 @@ from . import appdesc, flashset, github, gitops, layout, manifest, notes, publis
 def self_test():
     """Every module's vectors; the count of modules that passed."""
     n = 0
-    for mod in (versions, layout, appdesc, notes, github, manifest, flashset):
+    for mod in (versions, layout, appdesc, notes, github, manifest, flashset, publish):
         mod.self_test()
         n += 1
     return n

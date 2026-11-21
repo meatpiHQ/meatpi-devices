@@ -209,6 +209,25 @@ whole plan and writes nothing. A fine-grained token with Contents read and
 write on this repository and the firmware repository comes from
 `MEATPI_RELEASE_TOKEN` or `--token-file`; CI never has one.
 
+A firmware whose components live in a repository of their own names it in
+`tools/release.json`:
+
+```
+"components": { "repo": "meatpiHQ/meatpi-components", "tag": "{source_tag}" }
+```
+
+`publish` then tags that repository too, so one release is one tag in each
+repository and a later build starts from both. It takes the checkout the
+build compiled (read from `build/project_description.json`, not from where
+a components tree is expected), refuses one with uncommitted changes, one
+whose HEAD is on no branch of origin, one whose HEAD was committed after
+the image was written, and a tag that sits on another commit; then it
+creates the annotated tag at that HEAD, pushes it with your normal git
+credentials, and names both tags in the release bodies. `tag` is a pattern
+over `{source_tag}`, `{version}`, `{version_tagged}` and `{slug}`; the
+default is the firmware's own tag. The manifest is unchanged: it carries
+the firmware's tag and commit only.
+
 Modules: `versions` (grammar, order, selection), `layout` (tables, md5,
 csv, verdicts), `manifest` (load, insert, pointers, prune, validate),
 `notes`, `appdesc` (the application descriptor and image integrity),
