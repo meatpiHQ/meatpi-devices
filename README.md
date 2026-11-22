@@ -75,6 +75,43 @@ shows that sensor as unknown.
 Catalog entries override same-named non-reserved built-ins (e.g.
 `espnetlink`), which act as the integration's offline fallback.
 
+## The `integration` section
+
+Next to `device_types` the catalog may carry one more object, about the
+integration itself:
+
+```jsonc
+"integration": {
+  "history_states": {
+    "recorder_schemas": [53],          // recorder database versions the History fill may write to
+    "blocked_recorder_schemas": []     // versions it must not write to (the last word)
+  }
+}
+```
+
+**What it is for.** Since 2.0.0-beta2 the integration shows a drive it
+caught up from the device's log on Home Assistant's History page too. Home
+Assistant has no official call for a state of the past, so the integration
+writes into the recorder's own `states` table. It does that only on the
+recorder database versions it was tested with: the ones built into the
+installed integration, plus the ones listed here. On any other version it
+writes no state, says so once in the log, and the statistics import goes
+on as before.
+
+- **A new Home Assistant with a new database version** (`SCHEMA_VERSION` in
+  `homeassistant/components/recorder/db_schema.py`): run the firmware
+  repository's drive bench against it (`.\test.ps1 hadrive`, it judges every
+  state written against the device's log). When it passes, add the version
+  to `recorder_schemas`. Installs take it within 24 hours, with no
+  integration release.
+- **A version that turns out not to work**: add it to
+  `blocked_recorder_schemas`. A block wins over the list above and over
+  the versions built into an installed integration.
+
+Each list holds at most 64 whole numbers, each once; a version in both
+lists is refused by `validate_catalog.py`. Integration versions before
+2.0.0-beta2 ignore the section.
+
 ## How the integration consumes this
 
 - Fetch: 24 h cadence, 15 s timeout, 256 KiB cap, streamed read.

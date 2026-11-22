@@ -27,6 +27,7 @@ MAX_KEYWORD_LENGTH = 32
 MAX_MODEL_LENGTH = 64
 MAX_SENSORS = 32
 MAX_FIELD_LENGTH = 128
+MAX_RECORDER_SCHEMAS = 64
 
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 FIRMWARE_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -156,6 +157,53 @@ def check_device_type(slug: str, raw: object) -> None:
         err(f"{where}: unknown field {extra!r}")
 
 
+def check_schema_list(raw: object, where: str) -> set[int]:
+    """A list of recorder database versions: whole numbers, each once."""
+    if raw is None:
+        return set()
+    if not isinstance(raw, list):
+        err(f"{where}: must be a list of whole numbers")
+        return set()
+    if len(raw) > MAX_RECORDER_SCHEMAS:
+        err(f"{where}: more than {MAX_RECORDER_SCHEMAS} entries")
+    seen: set[int] = set()
+    for i, item in enumerate(raw):
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 < item < 100000:
+            err(f"{where}[{i}]: must be a whole number from 1 to 99999, got {item!r}")
+            continue
+        if item in seen:
+            err(f"{where}[{i}]: duplicate {item}")
+        seen.add(item)
+    return seen
+
+
+def check_integration(raw: object) -> None:
+    """The `integration` section: what the catalog says about the integration
+    itself. history_states = the recorder database versions its History fill
+    may write to beyond the ones built into an installed integration, and the
+    ones it must not write to (a block has the last word)."""
+    where = "integration"
+    if not isinstance(raw, dict):
+        err(f"{where}: must be an object")
+        return
+    for extra in set(raw) - {"_comment", "history_states"}:
+        err(f"{where}: unknown field {extra!r}")
+    states = raw.get("history_states")
+    if states is None:
+        return
+    if not isinstance(states, dict):
+        err(f"{where}.history_states: must be an object")
+        return
+    for extra in set(states) - {"recorder_schemas", "blocked_recorder_schemas"}:
+        err(f"{where}.history_states: unknown field {extra!r}")
+    approved = check_schema_list(states.get("recorder_schemas"), f"{where}.history_states.recorder_schemas")
+    blocked = check_schema_list(
+        states.get("blocked_recorder_schemas"), f"{where}.history_states.blocked_recorder_schemas",
+    )
+    for both in sorted(approved & blocked):
+        err(f"{where}.history_states: {both} is approved and blocked at once (the block wins: remove one)")
+
+
 def main() -> int:
     path = Path(sys.argv[1] if len(sys.argv) > 1 else "device_catalog.json")
     raw_bytes = path.read_bytes()
@@ -183,7 +231,9 @@ def main() -> int:
                 err("device_types: must not be empty")
             for slug, entry in device_types.items():
                 check_device_type(str(slug), entry)
-        for extra in set(document) - {"schema", "_comment", "device_types"}:
+        if "integration" in document:
+            check_integration(document["integration"])
+        for extra in set(document) - {"schema", "_comment", "device_types", "integration"}:
             err(f"document: unknown top-level field {extra!r}")
 
     if errors:
