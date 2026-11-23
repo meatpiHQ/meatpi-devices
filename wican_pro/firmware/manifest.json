@@ -4,19 +4,57 @@
   "model": "WiCAN PRO",
   "project_name": "wican-fw_obd_pro",
   "source_repo": "meatpiHQ/wican-fw",
-  "updated": "2026-11-21T13:23:18Z",
+  "updated": "2026-11-23T10:06:06Z",
   "channels": {
     "stable": {
       "latest": "4.51.0"
     },
     "beta": {
-      "latest": "6.0.0-beta.14"
+      "latest": "6.0.0-beta.15"
     },
     "alfa": {
-      "latest": "6.0.0-beta.14"
+      "latest": "6.0.0-beta.15"
     }
   },
   "releases": [
+    {
+      "version": "6.0.0-beta.15",
+      "fw_version": "6.0.0-beta.15",
+      "fw_build": "v6.0.0p-beta.15",
+      "commit": "d2439fb3ea5e527af6a059e472fcc712ecfb8974",
+      "tag": "v6.0.0p-beta.15",
+      "channel": "beta",
+      "date": "2026-11-23",
+      "summary": "Fifteenth beta: the battery voltage in the drive log, why a push to Home Assistant failed, and fixes for can.send, raw PIDs and CAN filters.",
+      "notes": "wican_pro/firmware/notes/6.0.0-beta.15.md",
+      "image": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.15/wican-fw_obd_pro_v6.0.0-beta.15.bin",
+        "size": 4205536,
+        "sha256": "7a2aa7323498b22235d91e1d65e6accf490012a9562e8f43bebd7f5f75a430e3",
+        "project_name": "wican-fw_obd_pro"
+      },
+      "flash_zip": {
+        "url": "https://github.com/meatpiHQ/meatpi-devices/releases/download/wican_pro-6.0.0-beta.15/wican-fw_obd_pro_v6.0.0-beta.15.zip",
+        "size": 2579954,
+        "sha256": "8fed5318bb3fba7cc2947c833c700ce7ea0e81234daa4bb1caecf21bff28e93e"
+      },
+      "bootloader": {
+        "sha256": "9519339e4972bc4d054a39e831bd3975dc8436c86a6d447bf73e924d1c1127f3"
+      },
+      "layout": {
+        "md5": "35c16cb5677477a27c662bd912582329",
+        "table": "wican_pro/firmware/layouts/35c16cb5677477a27c662bd912582329.csv"
+      },
+      "layout_from": {
+        "225242e6822a60aa93a9a67abd9442ed": {
+          "migration": "wipe",
+          "wipes": [
+            "storage"
+          ]
+        }
+      },
+      "yanked": false
+    },
     {
       "version": "6.0.0-beta.14",
       "fw_version": "6.0.0-beta.14",
